@@ -8,6 +8,30 @@ const app = express();
 
 app.use(express.json());
 
+// SSE clients for test app
+const sseClients: express.Response[] = [];
+
+export function getSseClients() { return sseClients; }
+
+function broadcast(event: string, data: unknown) {
+  const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  sseClients.forEach(client => client.write(msg));
+}
+
+// SSE endpoint
+app.get('/api/events', (req: express.Request, res: express.Response) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  res.write(': connected\n\n');
+  sseClients.push(res);
+  req.on('close', () => {
+    const idx = sseClients.indexOf(res);
+    if (idx !== -1) sseClients.splice(idx, 1);
+  });
+});
+
 // Get all tasks (with optional owner filter)
 app.get('/api/tasks', (req: Request, res: Response) => {
   const { owner } = req.query;
@@ -57,6 +81,7 @@ app.post('/api/tasks', (req: Request, res: Response) => {
     );
     
     const task = testDb.prepare('SELECT * FROM tasks WHERE id = ?').get(result.lastInsertRowid);
+    broadcast('task-created', task);
     res.status(201).json(task);
   } catch (err) {
     res.status(400).json({ error: 'Failed to create task' });
@@ -104,6 +129,7 @@ app.put('/api/tasks/:id', (req: Request, res: Response) => {
   );
   
   const task = testDb.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+  broadcast('task-updated', task);
   res.json(task);
 });
 
@@ -117,6 +143,7 @@ app.delete('/api/tasks/:id', (req: Request, res: Response) => {
   }
   
   testDb.prepare('DELETE FROM tasks WHERE id = ?').run(id);
+  broadcast('task-deleted', { id: Number(id) });
   res.status(204).send();
 });
 
@@ -143,6 +170,7 @@ app.patch('/api/tasks/:id/move', (req: Request, res: Response) => {
   stmt.run(status, position || 0, id);
   
   const task = testDb.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+  broadcast('task-updated', task);
   res.json(task);
 });
 

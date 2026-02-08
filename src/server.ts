@@ -26,6 +26,33 @@ db.exec(`
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+// SSE clients
+const sseClients: Response[] = [];
+
+function broadcast(event: string, data: unknown) {
+  const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  sseClients.forEach(client => client.write(msg));
+}
+
+// SSE endpoint
+app.get('/api/events', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  res.write(': connected\n\n');
+
+  sseClients.push(res);
+
+  const keepalive = setInterval(() => res.write(': keepalive\n\n'), 30000);
+
+  req.on('close', () => {
+    clearInterval(keepalive);
+    const idx = sseClients.indexOf(res);
+    if (idx !== -1) sseClients.splice(idx, 1);
+  });
+});
+
 // Get all tasks
 app.get('/api/tasks', (req: Request, res: Response) => {
   const tasks = db.prepare('SELECT * FROM tasks ORDER BY status, position, id').all();
@@ -58,6 +85,7 @@ app.post('/api/tasks', (req: Request, res: Response) => {
   );
   
   const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(result.lastInsertRowid);
+  broadcast('task-created', task);
   res.status(201).json(task);
 });
 
@@ -94,6 +122,7 @@ app.put('/api/tasks/:id', (req: Request, res: Response) => {
   );
   
   const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+  broadcast('task-updated', task);
   res.json(task);
 });
 
@@ -107,6 +136,7 @@ app.delete('/api/tasks/:id', (req: Request, res: Response) => {
   }
   
   db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
+  broadcast('task-deleted', { id: Number(id) });
   res.status(204).send();
 });
 
@@ -129,6 +159,7 @@ app.patch('/api/tasks/:id/move', (req: Request, res: Response) => {
   stmt.run(status, position || 0, id);
   
   const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+  broadcast('task-updated', task);
   res.json(task);
 });
 

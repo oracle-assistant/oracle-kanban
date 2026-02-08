@@ -267,5 +267,12 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// SSE - Real-time updates
+const eventSource = new EventSource('/api/events');
+eventSource.addEventListener('task-created', () => fetchTasks());
+eventSource.addEventListener('task-updated', () => fetchTasks());
+eventSource.addEventListener('task-deleted', () => fetchTasks());
+eventSource.onerror = () => console.warn('SSE connection error, will auto-reconnect');
+
 // Initialize
 fetchTasks();
