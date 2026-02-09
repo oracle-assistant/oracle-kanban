@@ -214,9 +214,21 @@ header h1 {
   border-radius: 50%;
 }
 
-.priority-1 .priority-dot { background: var(--priority-low); }
-.priority-2 .priority-dot { background: var(--priority-medium); }
-.priority-3 .priority-dot { background: var(--priority-high); }
+.priority-1 .priority-dot, .priority-low .priority-dot { background: var(--priority-low); }
+.priority-2 .priority-dot, .priority-medium .priority-dot { background: var(--priority-medium); }
+.priority-3 .priority-dot, .priority-high .priority-dot { background: var(--priority-high); }
+.priority-critical .priority-dot { background: #dc2626; box-shadow: 0 0 6px #dc2626; }
+
+.task-id {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  font-weight: 500;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  margin-right: 0.4rem;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
 
 .task-date {
   font-size: 0.75rem;

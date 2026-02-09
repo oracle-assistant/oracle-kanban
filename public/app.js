@@ -87,20 +87,22 @@ function createTaskCard(task) {
   card.draggable = true;
   card.dataset.id = task.id;
 
-  const priorityLabels = { 1: 'Low', 2: 'Medium', 3: 'High' };
+  const priorityLabels = { 1: 'Low', 2: 'Medium', 3: 'High', low: 'Low', medium: 'Medium', high: 'High', critical: 'Critical' };
+  const priorityClass = typeof task.priority === 'string' ? task.priority : ['', 'low', 'medium', 'high'][task.priority] || 'low';
   const ownerLabel = task.owner === 'oracle' ? '🤖 Oracle' : '👤 Soheil';
   const date = new Date(task.updated_at).toLocaleDateString();
 
   card.innerHTML = `
     <div class="task-header">
+      <span class="task-id">#${task.id}</span>
       <span class="task-title">${escapeHtml(task.title)}</span>
       <span class="task-owner ${task.owner}">${ownerLabel}</span>
     </div>
     ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ''}
     <div class="task-footer">
-      <span class="task-priority priority-${task.priority}">
+      <span class="task-priority priority-${priorityClass}">
         <span class="priority-dot"></span>
-        ${priorityLabels[task.priority] || 'Low'}
+        ${priorityLabels[task.priority] || task.priority || 'Low'}
       </span>
       <span class="task-date">${date}</span>
     </div>
@@ -228,7 +230,7 @@ taskForm.addEventListener('submit', async (e) => {
     title: document.getElementById('title').value,
     description: document.getElementById('description').value,
     owner: document.getElementById('owner').value,
-    priority: parseInt(document.getElementById('priority').value),
+    priority: document.getElementById('priority').value,
     status: document.getElementById('status').value
   };
   
